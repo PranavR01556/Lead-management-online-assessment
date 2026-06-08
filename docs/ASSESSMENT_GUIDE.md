@@ -6,6 +6,24 @@ Read this carefully before you start. You have the full codebase available to yo
 
 ---
 
+## Submission Workflow
+
+Before starting:
+1. **Create a new branch** from the `main` branch (e.g., `git checkout -b assessment-yourname`).
+2. **Implement your changes** on your new branch.
+3. **Create a file named `ASSESSMENT.md`** in the root of the project. Include the following sections:
+   - `# Approach`: Describe your approach.
+   - `# Assumptions`: List any assumptions made.
+   - `# Challenges`: Describe any challenges encountered.
+   - `# Improvements`: What would you improve with more time?
+   - `# AI Usage`: 
+     - Did you use Antigravity, ChatGPT, Claude, Cursor, Copilot, or other AI tools?
+     - How were they used?
+     - What suggestions were accepted or rejected?
+4. **Raise a pull request (PR)** to merge your branch back into the `main` branch when you are ready for review. Make sure to describe the details of the changes you have made in the PR description.
+
+---
+
 ## What You're Working With
 
 This is a simple CRM application where you can view, create, and edit sales leads.
