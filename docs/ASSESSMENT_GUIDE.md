@@ -105,6 +105,7 @@ This task involves both the backend and the frontend.
 - Do not modify the database schema or seeding logic
 - Add brief comments to explain the changes you made
 - Make sure all features still work after your changes (create, view, edit, search)
+- Make sure not to push to main branch without a pull request
 
 ---
 
