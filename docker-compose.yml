@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: crm_assessment_backend
+    ports:
+      - "8081:8000"
+    volumes:
+      - ./backend:/app
+    restart: unless-stopped
+    environment:
+      - PHP_ENV=development
