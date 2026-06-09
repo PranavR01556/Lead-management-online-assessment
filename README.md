@@ -11,8 +11,8 @@ This repository contains a standalone Lead Management assessment project.
 
 ## System Requirements
 
-- **Docker:** Engine version 20.10+ and Docker Compose v2.0+
-- **Node.js:** Node.js v18.0.0 or higher, with `npm` v9.0.0 or higher
+- **Docker & Docker Compose:** Docker Engine version 20.10+ and Docker Compose v2.0+ (required to run the containerized backend)
+- **Node.js:** Node.js v18.0.0 or higher, with `npm` v9.0.0 or higher (required to run the frontend development server)
 - **Web Browser:** Any modern web browser (Chrome, Firefox, Edge, Safari)
 
 ## How to Run the Environment
@@ -23,6 +23,7 @@ From the root directory, start the Docker container for the PHP and SQLite servi
 
 ```bash
 docker compose up --build
+or docker-compose up --build
 ```
 
 The backend API is served at **http://localhost:8081**. You can verify it is running by checking the health endpoint:
