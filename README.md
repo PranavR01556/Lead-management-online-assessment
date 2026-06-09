@@ -43,3 +43,5 @@ npm run dev
 ```
 
 The frontend application will be hosted locally (usually at **http://localhost:5173** or **http://localhost:5174** if 5173 is occupied).
+
+Check down docs/ASSESSMENT_GUIDE.md for instructions
