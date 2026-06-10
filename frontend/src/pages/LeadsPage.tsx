@@ -11,6 +11,7 @@ const PAGE_SIZE = 10;
 
 export default function LeadsPage() {
   const [leads,         setLeads]         = useState<Lead[]>([]);
+  const [searchInput,   setSearchInput]   = useState('');
   const [searchTerm,    setSearchTerm]    = useState('');
   const [statusFilter,  setStatusFilter]  = useState('');
   const [loading,       setLoading]       = useState(true);
@@ -18,19 +19,35 @@ export default function LeadsPage() {
   const [currentPage,   setCurrentPage]   = useState(1);
   const [selectedIds,   setSelectedIds]   = useState<number[]>([]);
 
-  // Fetch leads on mount and search changes
+  // Debounce search input changes into searchTerm state after 300ms
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setSearchTerm(searchInput);
+    }, 300);
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [searchInput]);
+
+  // Reset pagination page and clear selections when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+    setSelectedIds([]);
+  }, [searchTerm, statusFilter]);
+
+  // Fetch leads on mount and search / status changes
   const fetchLeads = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const res = await leadsApi.getLeads({ search: searchTerm });
+      const res = await leadsApi.getLeads({ search: searchTerm, status: statusFilter });
       setLeads(res.data);
     } catch {
       setError('Failed to load leads. Is the backend running?');
     } finally {
       setLoading(false);
     }
-  }, [searchTerm]);
+  }, [searchTerm, statusFilter]);
 
   useEffect(() => {
     fetchLeads();
@@ -43,20 +60,39 @@ export default function LeadsPage() {
     currentPage * PAGE_SIZE
   );
 
+  const allSelectedOnPage = paginated.length > 0 && paginated.every((lead) => selectedIds.includes(lead.id));
+
   const formatDate = (dt: string) =>
     new Date(dt).toLocaleDateString('en-IN', {
       day: '2-digit', month: 'short', year: 'numeric',
     });
 
-  const handleBulkAction = (status: string) => {
-    console.log('bulk action', { selectedIds, status });
+  const handleBulkAction = async (status: string) => {
+    if (selectedIds.length === 0) return;
+    try {
+      await leadsApi.bulkStatusUpdate({
+        ids: selectedIds,
+        status: status as LeadStatus,
+      });
+      setSelectedIds([]);
+      fetchLeads();
+    } catch {
+      alert('Failed to update status for selected leads.');
+    }
   };
 
-  const handleDelete = (id: number) => {
-    // TODO: Confirm deletion, call leadsApi.deleteLead(id), then refresh the list
-    alert('Delete not implemented yet — complete the backend first!');
-    console.log('delete lead', id);
+  const handleDelete = async (id: number) => {
+    if (window.confirm('Are you sure you want to delete this lead?')) {
+      try {
+        await leadsApi.deleteLead(id);
+        setSelectedIds((prev) => prev.filter((selectedId) => selectedId !== id));
+        fetchLeads();
+      } catch {
+        alert('Failed to delete lead.');
+      }
+    }
   };
+
 
   return (
     <>
@@ -67,7 +103,7 @@ export default function LeadsPage() {
           <div>
             <h1 className="page-title">
               Leads
-              <span className="chip-count">50</span>
+              <span className="chip-count">{leads.length}</span>
             </h1>
             <p className="page-subtitle">View all leads with search, filters and quick actions.</p>
           </div>
@@ -86,8 +122,8 @@ export default function LeadsPage() {
                 type="text"
                 className="search-input"
                 placeholder="Search by name, email or phone..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
               />
             </div>
 
@@ -147,8 +183,23 @@ export default function LeadsPage() {
                       <input
                         type="checkbox"
                         className="row-checkbox"
-                        onChange={() => {}}
-                        checked={false}
+                        checked={allSelectedOnPage}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedIds((prev) => {
+                              const newSelection = [...prev];
+                              paginated.forEach((lead) => {
+                                if (!newSelection.includes(lead.id)) {
+                                  newSelection.push(lead.id);
+                                }
+                              });
+                              return newSelection;
+                            });
+                          } else {
+                            const paginatedIds = paginated.map((l) => l.id);
+                            setSelectedIds((prev) => prev.filter((id) => !paginatedIds.includes(id)));
+                          }
+                        }}
                         title="Select all"
                       />
                     </th>
@@ -169,7 +220,13 @@ export default function LeadsPage() {
                           type="checkbox"
                           className="row-checkbox"
                           checked={selectedIds.includes(lead.id)}
-                          onChange={() => {}}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedIds((prev) => [...prev, lead.id]);
+                            } else {
+                              setSelectedIds((prev) => prev.filter((id) => id !== lead.id));
+                            }
+                          }}
                         />
                       </td>
                       <td className="td-number">{(currentPage - 1) * PAGE_SIZE + idx + 1}</td>
@@ -219,7 +276,7 @@ export default function LeadsPage() {
             <div className="table-footer">
               <span>
                 Showing {(currentPage - 1) * PAGE_SIZE + 1}–
-                {Math.min(currentPage * PAGE_SIZE, leads.length)} of 50 leads
+                {Math.min(currentPage * PAGE_SIZE, leads.length)} of {leads.length} leads
               </span>
               <div className="pagination">
                 <button
