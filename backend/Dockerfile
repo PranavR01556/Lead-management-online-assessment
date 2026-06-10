@@ -1,11 +1,8 @@
-FROM php:8.2-cli
+FROM php:8.2-cli-alpine
 
 # Install SQLite3 extension + PDO SQLite
-RUN apt-get update && apt-get install -y \
-    libsqlite3-dev \
-    sqlite3 \
-    && docker-php-ext-install pdo pdo_sqlite \
-    && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache sqlite-dev \
+    && docker-php-ext-install pdo pdo_sqlite
 
 WORKDIR /app
 
