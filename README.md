@@ -11,8 +11,8 @@ This repository contains a standalone Lead Management assessment project.
 
 ## System Requirements
 
-- **Docker & Docker Compose:** Docker Engine version 20.10+ and Docker Compose v2.0+ (required to run the containerized backend)
-- **Node.js:** Node.js v18.0.0 or higher, with `npm` v9.0.0 or higher (required to run the frontend development server)
+- **Docker & Docker Compose:** Engine version 20.10+ and Docker Compose v2.0+ (required to run the containerized PHP backend and SQLite database)
+- **Node.js:** Node.js v18.0.0 or higher, with `npm` v9.0.0 or higher
 - **Web Browser:** Any modern web browser (Chrome, Firefox, Edge, Safari)
 
 ## How to Run the Environment
@@ -43,5 +43,3 @@ npm run dev
 ```
 
 The frontend application will be hosted locally (usually at **http://localhost:5173** or **http://localhost:5174** if 5173 is occupied).
-
-Check down docs/ASSESSMENT_GUIDE.md for instructions
