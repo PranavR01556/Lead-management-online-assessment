@@ -12,25 +12,35 @@ const PAGE_SIZE = 10;
 export default function LeadsPage() {
   const [leads,         setLeads]         = useState<Lead[]>([]);
   const [searchTerm,    setSearchTerm]    = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter,  setStatusFilter]  = useState('');
   const [loading,       setLoading]       = useState(true);
   const [error,         setError]         = useState('');
   const [currentPage,   setCurrentPage]   = useState(1);
   const [selectedIds,   setSelectedIds]   = useState<number[]>([]);
+  useEffect(() => {
+  const timer = setTimeout(() => {
+    setDebouncedSearch(searchTerm);
+  }, 500);
 
+  return () => clearTimeout(timer);
+}, [searchTerm]);
   // Fetch leads on mount and search changes
   const fetchLeads = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const res = await leadsApi.getLeads({ search: searchTerm });
+      const res = await leadsApi.getLeads({
+  search: debouncedSearch,
+  status: statusFilter,
+});
       setLeads(res.data);
     } catch {
       setError('Failed to load leads. Is the backend running?');
     } finally {
       setLoading(false);
     }
-  }, [searchTerm]);
+  }, [debouncedSearch, statusFilter]);
 
   useEffect(() => {
     fetchLeads();
@@ -48,15 +58,40 @@ export default function LeadsPage() {
       day: '2-digit', month: 'short', year: 'numeric',
     });
 
-  const handleBulkAction = (status: string) => {
-    console.log('bulk action', { selectedIds, status });
-  };
+  const handleBulkAction = async (status: LeadStatus) => {
+  if (selectedIds.length === 0) {
+    alert('Please select at least one lead');
+    return;
+  }
 
-  const handleDelete = (id: number) => {
-    // TODO: Confirm deletion, call leadsApi.deleteLead(id), then refresh the list
-    alert('Delete not implemented yet — complete the backend first!');
-    console.log('delete lead', id);
-  };
+  try {
+    await leadsApi.bulkStatusUpdate({
+      ids: selectedIds,
+      status,
+    });
+
+    setSelectedIds([]);
+    fetchLeads();
+  } catch (error) {
+    console.error(error);
+    alert('Failed to update leads');
+  }
+};
+
+ const handleDelete = async (id: number) => {
+  const confirmed = window.confirm(
+    'Are you sure you want to delete this lead?'
+  );
+
+  if (!confirmed) return;
+
+  try {
+    await leadsApi.deleteLead(id);
+    fetchLeads();
+  } catch {
+    alert('Failed to delete lead');
+  }
+};
 
   return (
     <>
@@ -67,7 +102,7 @@ export default function LeadsPage() {
           <div>
             <h1 className="page-title">
               Leads
-              <span className="chip-count">50</span>
+              <span className="chip-count">{leads.length}</span>
             </h1>
             <p className="page-subtitle">View all leads with search, filters and quick actions.</p>
           </div>
@@ -115,8 +150,10 @@ export default function LeadsPage() {
                 className="bulk-select"
                 defaultValue=""
                 onChange={(e) => {
-                  if (e.target.value) handleBulkAction(e.target.value);
-                }}
+  if (e.target.value) {
+    handleBulkAction(e.target.value as LeadStatus);
+  }
+}}
               >
                 <option value="" disabled>Bulk Actions</option>
                 {STATUSES.map((s) => (
@@ -144,13 +181,22 @@ export default function LeadsPage() {
                 <thead>
                   <tr>
                     <th className="cb-col">
-                      <input
-                        type="checkbox"
-                        className="row-checkbox"
-                        onChange={() => {}}
-                        checked={false}
-                        title="Select all"
-                      />
+                     <input
+  type="checkbox"
+  className="row-checkbox"
+  checked={
+    paginated.length > 0 &&
+    paginated.every((lead) => selectedIds.includes(lead.id))
+  }
+  onChange={(e) => {
+    if (e.target.checked) {
+      setSelectedIds(paginated.map((lead) => lead.id));
+    } else {
+      setSelectedIds([]);
+    }
+  }}
+  title="Select all"
+/>
                     </th>
                     <th className="td-number">#</th>
                     <th>Name</th>
@@ -169,7 +215,13 @@ export default function LeadsPage() {
                           type="checkbox"
                           className="row-checkbox"
                           checked={selectedIds.includes(lead.id)}
-                          onChange={() => {}}
+                          onChange={() => {
+  setSelectedIds((prev) =>
+    prev.includes(lead.id)
+      ? prev.filter((id) => id !== lead.id)
+      : [...prev, lead.id]
+  );
+}}
                         />
                       </td>
                       <td className="td-number">{(currentPage - 1) * PAGE_SIZE + idx + 1}</td>
@@ -219,7 +271,7 @@ export default function LeadsPage() {
             <div className="table-footer">
               <span>
                 Showing {(currentPage - 1) * PAGE_SIZE + 1}–
-                {Math.min(currentPage * PAGE_SIZE, leads.length)} of 50 leads
+                {Math.min(currentPage * PAGE_SIZE, leads.length)} of {leads.length}  leads
               </span>
               <div className="pagination">
                 <button
