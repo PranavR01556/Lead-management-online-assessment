@@ -10,14 +10,14 @@ const STATUSES: LeadStatus[] = ['New', 'Contacted', 'Qualified', 'Lost'];
 const PAGE_SIZE = 10;
 
 export default function LeadsPage() {
-  const [leads,         setLeads]         = useState<Lead[]>([]);
-  const [searchTerm,    setSearchTerm]    = useState('');
-  const [statusFilter,  setStatusFilter]  = useState('');
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [loading,       setLoading]       = useState(true);
-  const [error,         setError]         = useState('');
-  const [currentPage,   setCurrentPage]   = useState(1);
-  const [selectedIds,   setSelectedIds]   = useState<number[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
   // Fetch leads on mount and search changes
   const fetchLeads = useCallback(async () => {
@@ -38,16 +38,16 @@ export default function LeadsPage() {
   }, [fetchLeads]);
 
   useEffect(() => {
-  const timer = setTimeout(() => {
-    setDebouncedSearch(searchTerm);
-  }, 500);
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+    }, 500);
 
-  return () => clearTimeout(timer);
-}, [searchTerm]);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   // Pagination
   const totalPages = Math.ceil(leads.length / PAGE_SIZE);
-  const paginated  = leads.slice(
+  const paginated = leads.slice(
     (currentPage - 1) * PAGE_SIZE,
     currentPage * PAGE_SIZE
   );
@@ -57,8 +57,21 @@ export default function LeadsPage() {
       day: '2-digit', month: 'short', year: 'numeric',
     });
 
-  const handleBulkAction = (status: string) => {
-    console.log('bulk action', { selectedIds, status });
+  const handleBulkAction = async (status: string) => {
+    if (selectedIds.length === 0) return;
+
+    try {
+      await leadsApi.bulkStatusUpdate({
+        ids: selectedIds,
+        status: status as LeadStatus,
+      });
+
+      setSelectedIds([]);
+
+      fetchLeads();
+    } catch {
+      alert("Failed to update leads.");
+    }
   };
 
   const handleDelete = (id: number) => {
@@ -124,7 +137,12 @@ export default function LeadsPage() {
                 className="bulk-select"
                 defaultValue=""
                 onChange={(e) => {
-                  if (e.target.value) handleBulkAction(e.target.value);
+                  const value = e.target.value;
+
+                  if (value) {
+                    handleBulkAction(value);
+                    e.target.selectedIndex = 0;
+                  }
                 }}
               >
                 <option value="" disabled>Bulk Actions</option>
@@ -156,8 +174,17 @@ export default function LeadsPage() {
                       <input
                         type="checkbox"
                         className="row-checkbox"
-                        onChange={() => {}}
-                        checked={false}
+                        checked={
+                          paginated.length > 0 &&
+                          paginated.every((lead) => selectedIds.includes(lead.id))
+                        }
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedIds(paginated.map((lead) => lead.id));
+                          } else {
+                            setSelectedIds([]);
+                          }
+                        }}
                         title="Select all"
                       />
                     </th>
@@ -178,7 +205,13 @@ export default function LeadsPage() {
                           type="checkbox"
                           className="row-checkbox"
                           checked={selectedIds.includes(lead.id)}
-                          onChange={() => {}}
+                          onChange={() => {
+                            setSelectedIds((prev) =>
+                              prev.includes(lead.id)
+                                ? prev.filter((id) => id !== lead.id)
+                                : [...prev, lead.id]
+                            );
+                          }}
                         />
                       </td>
                       <td className="td-number">{(currentPage - 1) * PAGE_SIZE + idx + 1}</td>
@@ -194,14 +227,14 @@ export default function LeadsPage() {
                           <Link to={`/leads/${lead.id}`} title="View">
                             <button className="action-btn" title="View lead">
                               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" />
                               </svg>
                             </button>
                           </Link>
                           <Link to={`/leads/${lead.id}/edit`} title="Edit">
                             <button className="action-btn" title="Edit lead">
                               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                               </svg>
                             </button>
                           </Link>
@@ -211,7 +244,7 @@ export default function LeadsPage() {
                             onClick={() => handleDelete(lead.id)}
                           >
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                              <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6" /><path d="M14 11v6" /><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
                             </svg>
                           </button>
                         </div>
