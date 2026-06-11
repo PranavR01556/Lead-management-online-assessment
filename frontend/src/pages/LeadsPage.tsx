@@ -67,7 +67,7 @@ export default function LeadsPage() {
           <div>
             <h1 className="page-title">
               Leads
-              <span className="chip-count">50</span>
+              <span className="chip-count">{leads.length}</span>
             </h1>
             <p className="page-subtitle">View all leads with search, filters and quick actions.</p>
           </div>
@@ -219,7 +219,7 @@ export default function LeadsPage() {
             <div className="table-footer">
               <span>
                 Showing {(currentPage - 1) * PAGE_SIZE + 1}–
-                {Math.min(currentPage * PAGE_SIZE, leads.length)} of 50 leads
+                {Math.min(currentPage * PAGE_SIZE, leads.length)} of {leads.length} leads
               </span>
               <div className="pagination">
                 <button
