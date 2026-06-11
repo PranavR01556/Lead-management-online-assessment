@@ -17,23 +17,31 @@ export default function LeadsPage() {
   const [error,         setError]         = useState('');
   const [currentPage,   setCurrentPage]   = useState(1);
   const [selectedIds,   setSelectedIds]   = useState<number[]>([]);
+  
+  
 
   // Fetch leads on mount and search changes
   const fetchLeads = useCallback(async () => {
+    console.log("FETCHING API:", searchTerm);
+
     setLoading(true);
     setError('');
     try {
-      const res = await leadsApi.getLeads({ search: searchTerm });
+      const res = await leadsApi.getLeads({ search: searchTerm ,status:statusFilter,});
       setLeads(res.data);
     } catch {
       setError('Failed to load leads. Is the backend running?');
     } finally {
       setLoading(false);
     }
-  }, [searchTerm]);
+  }, [searchTerm,statusFilter]);
 
   useEffect(() => {
+  const timer = setTimeout(() => {
     fetchLeads();
+  }, 500);
+
+  return () => clearTimeout(timer);
   }, [fetchLeads]);
 
   // Pagination
@@ -48,14 +56,47 @@ export default function LeadsPage() {
       day: '2-digit', month: 'short', year: 'numeric',
     });
 
-  const handleBulkAction = (status: string) => {
-    console.log('bulk action', { selectedIds, status });
-  };
+  const handleBulkAction = async (status: string) => {
+  try {
+    await leadsApi.bulkStatusUpdate({
+      ids: selectedIds,
+      status: status as LeadStatus,
+    });
 
-  const handleDelete = (id: number) => {
+    setSelectedIds([]);
+
+    await fetchLeads();
+
+    alert("Status updated successfully!");
+  } catch {
+    alert("Failed to update status");
+  }
+};
+  //
+  const allSelected =
+  paginated.length > 0 &&
+  paginated.every((lead) => selectedIds.includes(lead.id));
+
+  const handleDelete = async(id: number) => {
     // TODO: Confirm deletion, call leadsApi.deleteLead(id), then refresh the list
-    alert('Delete not implemented yet — complete the backend first!');
-    console.log('delete lead', id);
+    // alert('Delete not implemented yet — complete the backend first!');
+    // console.log('delete lead', id);
+    const confirmed = window.confirm(
+    'Are you sure you want to delete this lead?'
+      );
+
+      if (!confirmed) return;
+
+      try {
+        await leadsApi.deleteLead(id);
+
+        await fetchLeads();
+
+        alert('Lead deleted successfully');
+      } catch (error) {
+        console.error(error);
+        alert('Failed to delete lead');
+      }
   };
 
   return (
@@ -67,7 +108,7 @@ export default function LeadsPage() {
           <div>
             <h1 className="page-title">
               Leads
-              <span className="chip-count">50</span>
+              <span className="chip-count">{leads.length}</span>
             </h1>
             <p className="page-subtitle">View all leads with search, filters and quick actions.</p>
           </div>
@@ -147,8 +188,14 @@ export default function LeadsPage() {
                       <input
                         type="checkbox"
                         className="row-checkbox"
-                        onChange={() => {}}
-                        checked={false}
+                        onChange={() => {
+                          if (allSelected) {
+                            setSelectedIds([]);
+                          } else {
+                            setSelectedIds(paginated.map((lead) => lead.id));
+                          }
+                        }}
+                        checked={allSelected}
                         title="Select all"
                       />
                     </th>
@@ -169,7 +216,13 @@ export default function LeadsPage() {
                           type="checkbox"
                           className="row-checkbox"
                           checked={selectedIds.includes(lead.id)}
-                          onChange={() => {}}
+                          onChange={() => {
+                            setSelectedIds((prev) =>
+                              prev.includes(lead.id)
+                                ? prev.filter((id) => id !== lead.id)
+                                : [...prev, lead.id]
+                            );
+                          }}
                         />
                       </td>
                       <td className="td-number">{(currentPage - 1) * PAGE_SIZE + idx + 1}</td>
@@ -219,7 +272,7 @@ export default function LeadsPage() {
             <div className="table-footer">
               <span>
                 Showing {(currentPage - 1) * PAGE_SIZE + 1}–
-                {Math.min(currentPage * PAGE_SIZE, leads.length)} of 50 leads
+                {Math.min(currentPage * PAGE_SIZE, leads.length)} of {leads.length} leads
               </span>
               <div className="pagination">
                 <button
