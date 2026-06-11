@@ -93,8 +93,10 @@ class Lead
     }
     public function deleteById(int $id): bool
     {
-        // TODO: Write the SQL to delete the lead with the given $id
-        // Return true if the lead was deleted, false if it was not found
-        return false;
+        // Write the SQL to delete the lead with the given $id
+        $stmt = $this->db->prepare('DELETE FROM leads WHERE id = ?');
+        $stmt->execute([$id]);
+        // Return true if the lead was deleted (affected rows > 0)
+        return $stmt->rowCount() > 0;
     }
 }
