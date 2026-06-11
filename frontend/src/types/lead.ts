@@ -30,3 +30,4 @@ export interface BulkStatusPayload {
   ids: number[];
   status: LeadStatus;
 }
+ 
