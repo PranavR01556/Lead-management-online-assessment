@@ -134,9 +134,13 @@ export default function LeadsPage() {
             </h1>
             <p className="page-subtitle">View all leads with search, filters and quick actions.</p>
           </div>
-          <Link to="/leads/new" className="btn btn-primary">
-            <Plus size={15} /> Add Lead
-          </Link>
+          <div className="btn-group" role="group">
+            <strong>Total Leads {leads.length} </strong>
+            <Link to="/leads/new" className="btn btn-primary">
+              <Plus size={16} className="me-1" />
+              Add Lead
+            </Link>
+          </div>
         </div>
 
         <div className="card">
