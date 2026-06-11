@@ -48,5 +48,11 @@
 - **Toast Notifications:** Replace browser alert dialogue boxes with polished toast/banner notifications.
 - **Pagination enhancements:** Support changing the page size limit dynamically.
 
----
 
+## AI Usage
+- **Did you use Antigravity, ChatGPT, Claude, Cursor, Copilot, or other AI tools?**
+  - Yes, I used Antigravity (Google DeepMind's agentic coding assistant).
+- **How were they used?**
+  - Used for implementing, refactoring, and verifying all five frontend and backend tasks, as well as compiling the technical assessment details.
+- **What suggestions were accepted or rejected?**
+  - Accepted suggestions: debounced search hook logic, dynamic lead calculations in the header/footer, and PHP database deletion controller-model routing structure. No suggestions were rejected.
