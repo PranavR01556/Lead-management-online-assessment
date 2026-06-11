@@ -1,20 +1,16 @@
 <?php
 require_once __DIR__ . '/../config/db.php';
-
 class Lead
 {
     private PDO $db;
-
     public function __construct()
     {
         $this->db = getDB();
     }
-
     public function findAll(string $search = '', string $status = ''): array
     {
         $sql    = 'SELECT * FROM leads WHERE 1=1';
         $params = [];
-
         if ($search !== '') {
             $sql      .= ' AND (name LIKE ? OR email LIKE ? OR phone LIKE ?)';
             $like      = "%{$search}%";
@@ -22,26 +18,21 @@ class Lead
             $params[]  = $like;
             $params[]  = $like;
         }
-
         if ($status !== '') {
             $sql      .= ' AND status = ?';
             $params[]  = $status;
         }
-
         $sql .= ' ORDER BY created_at DESC';
-
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll();
     }
-
     public function findById(int $id): array|false
     {
         $stmt = $this->db->prepare('SELECT * FROM leads WHERE id = ?');
         $stmt->execute([$id]);
         return $stmt->fetch();
     }
-
     public function create(array $data): int
     {
         $stmt = $this->db->prepare(
@@ -58,7 +49,6 @@ class Lead
         ]);
         return (int) $this->db->lastInsertId();
     }
-
     public function update(int $id, array $data): bool
     {
         $stmt = $this->db->prepare(
@@ -77,24 +67,21 @@ class Lead
             ':id'     => $id,
         ]);
     }
-
     public function bulkUpdateStatus(array $ids, string $status): int
     {
         if (empty($ids)) return 0;
         $placeholders = implode(',', array_fill(0, count($ids), '?'));
-        $params       = array_merge($ids, [$status]);
         $stmt         = $this->db->prepare(
             "UPDATE leads SET status=?, updated_at=CURRENT_TIMESTAMP
              WHERE id IN ({$placeholders})"
         );
-        // Note: parameter order — status first, then IDs
         $stmt->execute(array_merge([$status], $ids));
         return $stmt->rowCount();
     }
     public function deleteById(int $id): bool
     {
-        // TODO: Write the SQL to delete the lead with the given $id
-        // Return true if the lead was deleted, false if it was not found
-        return false;
+        $stmt = $this->db->prepare('DELETE FROM leads WHERE id = ?');
+        $stmt->execute([$id]);
+        return $stmt->rowCount() > 0;
     }
 }
