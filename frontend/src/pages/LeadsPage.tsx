@@ -23,14 +23,14 @@ export default function LeadsPage() {
     setLoading(true);
     setError('');
     try {
-      const res = await leadsApi.getLeads({ search: searchTerm });
+      const res = await leadsApi.getLeads({ search: searchTerm, status: statusFilter });
       setLeads(res.data);
     } catch {
       setError('Failed to load leads. Is the backend running?');
     } finally {
       setLoading(false);
     }
-  }, [searchTerm]);
+  }, [searchTerm, statusFilter]);
 
   useEffect(() => {
     fetchLeads();
