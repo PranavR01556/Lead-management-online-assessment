@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Search, Filter } from 'lucide-react';
 import { leadsApi } from '../services/leadsApi';
@@ -13,6 +13,7 @@ export default function LeadsPage() {
   const [leads,         setLeads]         = useState<Lead[]>([]);
   const [searchTerm,    setSearchTerm]    = useState('');
   const [statusFilter,  setStatusFilter]  = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [loading,       setLoading]       = useState(true);
   const [error,         setError]         = useState('');
   const [currentPage,   setCurrentPage]   = useState(1);
@@ -23,18 +24,26 @@ export default function LeadsPage() {
     setLoading(true);
     setError('');
     try {
-      const res = await leadsApi.getLeads({ search: searchTerm, status: statusFilter });
+      const res = await leadsApi.getLeads({ search: debouncedSearch, status: statusFilter });
       setLeads(res.data);
     } catch {
       setError('Failed to load leads. Is the backend running?');
     } finally {
       setLoading(false);
     }
-  }, [searchTerm, statusFilter]);
+  }, [debouncedSearch, statusFilter]);
 
   useEffect(() => {
     fetchLeads();
   }, [fetchLeads]);
+
+  useEffect(() => {
+  const timer = setTimeout(() => {
+    setDebouncedSearch(searchTerm);
+  }, 500);
+
+  return () => clearTimeout(timer);
+}, [searchTerm]);
 
   // Pagination
   const totalPages = Math.ceil(leads.length / PAGE_SIZE);
