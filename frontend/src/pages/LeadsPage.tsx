@@ -12,7 +12,7 @@ const PAGE_SIZE = 10;
 export default function LeadsPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [optimalSearchTerm, setOptimalSearchTerm]=useState(searchTerm);
+  const [optimalSearchTerm, setOptimalSearchTerm] = useState(searchTerm);
   const [statusFilter, setStatusFilter] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -21,27 +21,36 @@ export default function LeadsPage() {
 
   // Fetch leads on mount and search changes
   const fetchLeads = useCallback(async () => {
-    const res = await leadsApi.getLeads({
-      search: optimalSearchTerm
-    });
+    try {
+      setLoading(true);
+      setError('');
+      const res = await leadsApi.getLeads({
+        search: optimalSearchTerm,
+      });
 
-    setLeads(res.data);
+      setLeads(res.data);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to load leads");
+    } finally {
+      setLoading(false);
+    }
   }, [optimalSearchTerm]);
 
   useEffect(() => {
     fetchLeads();
   }, [fetchLeads]);
 
-  useEffect(()=>{
-    const time=setTimeout(()=>{
+  useEffect(() => {
+    const time = setTimeout(() => {
       setOptimalSearchTerm(searchTerm);
-    },300);
-    return ()=> clearTimeout(time);
-  },[searchTerm]);
-  
-    const filteredLeads = leads.filter((lead) =>
-      !statusFilter || lead.status === statusFilter
-    );
+    }, 300);
+    return () => clearTimeout(time);
+  }, [searchTerm]);
+
+  const filteredLeads = leads.filter((lead) =>
+    !statusFilter || lead.status === statusFilter
+  );
 
   // Pagination
   const totalPages = Math.ceil(filteredLeads.length / PAGE_SIZE);
@@ -55,14 +64,47 @@ export default function LeadsPage() {
       day: '2-digit', month: 'short', year: 'numeric',
     });
 
-  const handleBulkAction = (status: string) => {
-    console.log('bulk action', { selectedIds, status });
+  const handleBulkAction = async (status: LeadStatus) => {
+    try {
+      await leadsApi.bulkStatusUpdate({
+        ids: selectedIds,
+        status,
+      });
+
+      await fetchLeads();
+      setSelectedIds([]);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to update leads');
+    }
   };
 
   const handleDelete = (id: number) => {
     // TODO: Confirm deletion, call leadsApi.deleteLead(id), then refresh the list
     alert('Delete not implemented yet — complete the backend first!');
     console.log('delete lead', id);
+  };
+
+  const toggleSelection = (id: number) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((sid) => sid !== id) : [...prev, id]
+    );
+  }
+
+  const handleSelectAll = () => {
+    const currentPageIds = paginated.map((lead) => lead.id);
+    const allSelected = currentPageIds.every((id) =>
+      selectedIds.includes(id)
+    );
+    if (allSelected) {
+      setSelectedIds((prev) =>
+        prev.filter((id) => !currentPageIds.includes(id))
+      );
+    } else {
+      setSelectedIds((prev) => [
+        ...new Set([...prev, ...currentPageIds]),
+      ]);
+    }
   };
 
   return (
@@ -154,8 +196,13 @@ export default function LeadsPage() {
                       <input
                         type="checkbox"
                         className="row-checkbox"
-                        onChange={() => { }}
-                        checked={false}
+                        checked={
+                          paginated.length > 0 &&
+                          paginated.every((lead) =>
+                            selectedIds.includes(lead.id)
+                          )
+                        }
+                        onChange={handleSelectAll}
                         title="Select all"
                       />
                     </th>
@@ -176,7 +223,7 @@ export default function LeadsPage() {
                           type="checkbox"
                           className="row-checkbox"
                           checked={selectedIds.includes(lead.id)}
-                          onChange={() => { }}
+                          onChange={() => toggleSelection(lead.id)}
                         />
                       </td>
                       <td className="td-number">{(currentPage - 1) * PAGE_SIZE + idx + 1}</td>
