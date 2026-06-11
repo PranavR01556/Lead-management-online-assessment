@@ -7,9 +7,9 @@ import type { Lead } from '../types/lead';
 
 export default function LeadDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const [lead,    setLead]    = useState<Lead | null>(null);
+  const [lead, setLead] = useState<Lead | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState('');
+  const [error, setError] = useState('');
 
   useEffect(() => {
     leadsApi.getLead(Number(id))
@@ -45,7 +45,32 @@ export default function LeadDetailPage() {
               <Link to={`/leads/${lead.id}/edit`} className="btn btn-ghost btn-sm">
                 ✏ Edit
               </Link>
-              <Link to="/leads" className="btn btn-ghost btn-sm">← Back</Link>
+
+              <button
+                className="btn btn-danger btn-sm"
+                onClick={async () => {
+                  if (!lead) return;
+
+                  const confirmed = window.confirm(
+                    "Are you sure you want to delete this lead?"
+                  );
+
+                  if (!confirmed) return;
+
+                  try {
+                    await leadsApi.deleteLead(lead.id);
+                    window.location.href = "/leads";
+                  } catch {
+                    alert("Failed to delete lead.");
+                  }
+                }}
+              >
+                🗑 Delete
+              </button>
+
+              <Link to="/leads" className="btn btn-ghost btn-sm">
+                ← Back
+              </Link>
             </div>
           )}
         </div>
@@ -58,10 +83,10 @@ export default function LeadDetailPage() {
           <div className="card" style={{ maxWidth: 540 }}>
             <div style={{ padding: '20px 24px', display: 'grid', gap: 16 }}>
               {[
-                ['Full Name',    lead.name],
-                ['Email',        lead.email],
-                ['Phone',        lead.phone],
-                ['Source',       lead.source],
+                ['Full Name', lead.name],
+                ['Email', lead.email],
+                ['Phone', lead.phone],
+                ['Source', lead.source],
                 ['Created Date', formatDate(lead.created_at)],
                 ['Last Updated', formatDate(lead.updated_at)],
               ].map(([label, value]) => (

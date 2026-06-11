@@ -74,11 +74,24 @@ export default function LeadsPage() {
     }
   };
 
-  const handleDelete = (id: number) => {
-    // TODO: Confirm deletion, call leadsApi.deleteLead(id), then refresh the list
-    alert('Delete not implemented yet — complete the backend first!');
-    console.log('delete lead', id);
-  };
+  const handleDelete = async (id: number) => {
+  const confirmed = window.confirm(
+    "Are you sure you want to delete this lead?"
+  );
+
+  if (!confirmed) return;
+
+  try {
+    await leadsApi.deleteLead(id);
+
+    await fetchLeads();
+
+    setSelectedIds((prev) => prev.filter((leadId) => leadId !== id));
+  } catch (error) {
+    console.error(error);
+    alert("Failed to delete lead.");
+  }
+};
 
   return (
     <>
