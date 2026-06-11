@@ -50,7 +50,3 @@
 
 ---
 
-## AI Usage
-- Used the Antigravity AI pair programming assistant to write code and verify integration.
-- Accepted suggestions for state structure and debounce hook implementation.
-- Kept design inline with the existing framework without adding unnecessary bloated dependencies.
