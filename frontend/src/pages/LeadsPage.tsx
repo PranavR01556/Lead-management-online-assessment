@@ -12,6 +12,7 @@ const PAGE_SIZE = 10;
 export default function LeadsPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [optimalSearchTerm, setOptimalSearchTerm]=useState(searchTerm);
   const [statusFilter, setStatusFilter] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -20,21 +21,23 @@ export default function LeadsPage() {
 
   // Fetch leads on mount and search changes
   const fetchLeads = useCallback(async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const res = await leadsApi.getLeads({ search: searchTerm });
-      setLeads(res.data);
-    } catch {
-      setError('Failed to load leads. Is the backend running?');
-    } finally {
-      setLoading(false);
-    }
-  }, [searchTerm]);
+    const res = await leadsApi.getLeads({
+      search: optimalSearchTerm
+    });
+
+    setLeads(res.data);
+  }, [optimalSearchTerm]);
 
   useEffect(() => {
     fetchLeads();
   }, [fetchLeads]);
+
+  useEffect(()=>{
+    const time=setTimeout(()=>{
+      setOptimalSearchTerm(searchTerm);
+    },300);
+    return ()=> clearTimeout(time);
+  },[searchTerm]);
   
     const filteredLeads = leads.filter((lead) =>
       !statusFilter || lead.status === statusFilter
