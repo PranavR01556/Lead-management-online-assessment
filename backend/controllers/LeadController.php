@@ -101,13 +101,19 @@ class LeadController
 
     // DELETE /api/leads/:id
     public function delete(int $id): void
-    {
-        // TODO: Check if the lead exists first (return 404 if not found)
-        // TODO: Call $this->model->deleteById($id) to delete it
-        // TODO: Return HTTP 204 (No Content) on success
-        http_response_code(501);
-        echo json_encode(['error' => 'Delete not implemented yet']);
-    }
+   {
+        $lead = $this->model->findById($id);
+
+        if (!$lead) {
+           http_response_code(404);
+           echo json_encode(['error' => 'Lead not found']);
+           return;
+       }
+
+    $this->model->deleteById($id);
+
+    http_response_code(204);
+  }
 
     // ─── helpers ───────────────────────────────────────────────
 
