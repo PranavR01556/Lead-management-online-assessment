@@ -10,35 +10,51 @@ const STATUSES: LeadStatus[] = ['New', 'Contacted', 'Qualified', 'Lost'];
 const PAGE_SIZE = 10;
 
 export default function LeadsPage() {
-  const [leads,         setLeads]         = useState<Lead[]>([]);
-  const [searchTerm,    setSearchTerm]    = useState('');
-  const [statusFilter,  setStatusFilter]  = useState('');
-  const [loading,       setLoading]       = useState(true);
-  const [error,         setError]         = useState('');
-  const [currentPage,   setCurrentPage]   = useState(1);
-  const [selectedIds,   setSelectedIds]   = useState<number[]>([]);
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [optimalSearchTerm, setOptimalSearchTerm] = useState(searchTerm);
+  const [statusFilter, setStatusFilter] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
   // Fetch leads on mount and search changes
   const fetchLeads = useCallback(async () => {
-    setLoading(true);
-    setError('');
     try {
-      const res = await leadsApi.getLeads({ search: searchTerm });
+      setLoading(true);
+      setError('');
+      const res = await leadsApi.getLeads({
+        search: optimalSearchTerm,
+      });
+
       setLeads(res.data);
-    } catch {
-      setError('Failed to load leads. Is the backend running?');
+    } catch (err) {
+      console.error(err);
+      setError("Failed to load leads");
     } finally {
       setLoading(false);
     }
-  }, [searchTerm]);
+  }, [optimalSearchTerm]);
 
   useEffect(() => {
     fetchLeads();
   }, [fetchLeads]);
 
+  useEffect(() => {
+    const time = setTimeout(() => {
+      setOptimalSearchTerm(searchTerm);
+    }, 300);
+    return () => clearTimeout(time);
+  }, [searchTerm]);
+
+  const filteredLeads = leads.filter((lead) =>
+    !statusFilter || lead.status === statusFilter
+  );
+
   // Pagination
-  const totalPages = Math.ceil(leads.length / PAGE_SIZE);
-  const paginated  = leads.slice(
+  const totalPages = Math.ceil(filteredLeads.length / PAGE_SIZE);
+  const paginated = filteredLeads.slice(
     (currentPage - 1) * PAGE_SIZE,
     currentPage * PAGE_SIZE
   );
@@ -48,14 +64,61 @@ export default function LeadsPage() {
       day: '2-digit', month: 'short', year: 'numeric',
     });
 
-  const handleBulkAction = (status: string) => {
-    console.log('bulk action', { selectedIds, status });
+  const handleBulkAction = async (status: LeadStatus) => {
+    try {
+      await leadsApi.bulkStatusUpdate({
+        ids: selectedIds,
+        status,
+      });
+
+      await fetchLeads();
+      setSelectedIds([]);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to update leads');
+    }
   };
 
-  const handleDelete = (id: number) => {
+  const handleDelete = async (id: number) => {
     // TODO: Confirm deletion, call leadsApi.deleteLead(id), then refresh the list
-    alert('Delete not implemented yet — complete the backend first!');
-    console.log('delete lead', id);
+    const confirmed = window.confirm(
+      'Are you sure you want to delete this lead?'
+    );
+    if (!confirmed) return;
+    try {
+      await leadsApi.deleteLead(id);
+      setLeads((prev) =>
+        prev.filter((lead) => lead.id !== id)
+      );
+      setSelectedIds((prev) =>
+        prev.filter((leadId) => leadId !== id)
+      );
+    } catch (err) {
+      console.error(err);
+      alert('Failed to delete lead');
+    }
+  };
+
+  const toggleSelection = (id: number) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((sid) => sid !== id) : [...prev, id]
+    );
+  }
+
+  const handleSelectAll = () => {
+    const currentPageIds = paginated.map((lead) => lead.id);
+    const allSelected = currentPageIds.every((id) =>
+      selectedIds.includes(id)
+    );
+    if (allSelected) {
+      setSelectedIds((prev) =>
+        prev.filter((id) => !currentPageIds.includes(id))
+      );
+    } else {
+      setSelectedIds((prev) => [
+        ...new Set([...prev, ...currentPageIds]),
+      ]);
+    }
   };
 
   return (
@@ -67,13 +130,17 @@ export default function LeadsPage() {
           <div>
             <h1 className="page-title">
               Leads
-              <span className="chip-count">50</span>
+              <span className="chip-count">{filteredLeads.length}</span>
             </h1>
             <p className="page-subtitle">View all leads with search, filters and quick actions.</p>
           </div>
-          <Link to="/leads/new" className="btn btn-primary">
-            <Plus size={15} /> Add Lead
-          </Link>
+          <div className="btn-group" role="group">
+            <strong>Total Leads {leads.length} </strong>
+            <Link to="/leads/new" className="btn btn-primary">
+              <Plus size={16} className="me-1" />
+              Add Lead
+            </Link>
+          </div>
         </div>
 
         <div className="card">
@@ -147,8 +214,13 @@ export default function LeadsPage() {
                       <input
                         type="checkbox"
                         className="row-checkbox"
-                        onChange={() => {}}
-                        checked={false}
+                        checked={
+                          paginated.length > 0 &&
+                          paginated.every((lead) =>
+                            selectedIds.includes(lead.id)
+                          )
+                        }
+                        onChange={handleSelectAll}
                         title="Select all"
                       />
                     </th>
@@ -169,7 +241,7 @@ export default function LeadsPage() {
                           type="checkbox"
                           className="row-checkbox"
                           checked={selectedIds.includes(lead.id)}
-                          onChange={() => {}}
+                          onChange={() => toggleSelection(lead.id)}
                         />
                       </td>
                       <td className="td-number">{(currentPage - 1) * PAGE_SIZE + idx + 1}</td>
@@ -185,14 +257,14 @@ export default function LeadsPage() {
                           <Link to={`/leads/${lead.id}`} title="View">
                             <button className="action-btn" title="View lead">
                               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" />
                               </svg>
                             </button>
                           </Link>
                           <Link to={`/leads/${lead.id}/edit`} title="Edit">
                             <button className="action-btn" title="Edit lead">
                               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                               </svg>
                             </button>
                           </Link>
@@ -202,7 +274,7 @@ export default function LeadsPage() {
                             onClick={() => handleDelete(lead.id)}
                           >
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                              <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6" /><path d="M14 11v6" /><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
                             </svg>
                           </button>
                         </div>
@@ -215,11 +287,11 @@ export default function LeadsPage() {
           )}
 
           {/* Table Footer */}
-          {!loading && !error && leads.length > 0 && (
+          {!loading && !error && filteredLeads.length > 0 && (
             <div className="table-footer">
               <span>
                 Showing {(currentPage - 1) * PAGE_SIZE + 1}–
-                {Math.min(currentPage * PAGE_SIZE, leads.length)} of 50 leads
+                {Math.min(currentPage * PAGE_SIZE, filteredLeads.length)} of {filteredLeads.length} leads
               </span>
               <div className="pagination">
                 <button
