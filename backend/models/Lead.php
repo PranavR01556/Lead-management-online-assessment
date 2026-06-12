@@ -91,10 +91,14 @@ class Lead
         $stmt->execute(array_merge([$status], $ids));
         return $stmt->rowCount();
     }
-    public function deleteById(int $id): bool
-    {
-        // TODO: Write the SQL to delete the lead with the given $id
-        // Return true if the lead was deleted, false if it was not found
-        return false;
-    }
+    
+    
+
+   public function deleteById(int $id): bool
+{
+    $stmt = $this->db->prepare('DELETE FROM leads WHERE id = ?');
+    $stmt->execute([$id]);
+
+    return $stmt->rowCount() > 0;
+}
 }
